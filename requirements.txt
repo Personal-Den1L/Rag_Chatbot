@@ -1,0 +1,29 @@
+# --- API & Server ---
+fastapi
+uvicorn
+python-dotenv
+
+# --- Frontend UI ---
+chainlit
+
+# --- Vector Database & Embeddings ---
+chromadb
+sentence-transformers
+
+# --- LLM Integration ---
+google-generativeai
+
+# --- Document Processing (PDFs) ---
+docling
+rapidocr-onnxruntime
+langchain-text-splitters
+pypdf
+
+# --- Web Scraping ---
+beautifulsoup4
+requests
+langchain-community
+markdownify
+
+# --- Caching ---
+redis

@@ -1,0 +1,89 @@
+#docker-compose.yml
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    env_file:
+      - .env
+    environment:
+      REDIS_HOST: redis
+      CHROMA_PERSIST_DIRECTORY: /app/data/chroma
+      HF_HOME: /app/data/hf_cache
+    command: uvicorn app.api.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app/app  # This syncs your local code to the container
+      - ./data/chroma:/app/data/chroma
+      - ./data/raw:/app/data/raw
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/docs', timeout=2)",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - rag_network
+
+  ui:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.ui
+    env_file:
+      - .env
+    environment:
+      API_BASE_URL: http://api:8000
+    command: chainlit run app/ui/app.py --host 0.0.0.0 --port 8501
+    ports:
+      - "8501:8501"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8501', timeout=2)",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - rag_network
+
+  redis:
+    image: redis:alpine
+    env_file:
+      - .env
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - ./data/cache:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - rag_network
+
+networks:
+  rag_network:
+    driver: bridge
